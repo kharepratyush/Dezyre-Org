@@ -1,0 +1,267 @@
+<!--For references : http://www.rtcmulticonnection.org/docs/ or contact Pratyush-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Screen Sharing</title>
+    <link rel="stylesheet" href="//cdn.webrtc-experiment.com/style.css">
+    
+    <style>
+	    audio,
+	    video {
+	        -moz-transition: all 1s ease;
+	        -ms-transition: all 1s ease;
+	        -o-transition: all 1s ease;
+	        -webkit-transition: all 1s ease;
+	        transition: all 1s ease;
+	        vertical-align: top;
+	        width: 100%;
+	    }
+	    input {
+	        border: 1px solid #d9d9d9;
+	        border-radius: 1px;
+	        font-size: 2em;
+	        margin: .2em;
+	        width: 30%;
+	    }
+	    .setup {
+	        border-bottom-left-radius: 0;
+	        border-top-left-radius: 0;
+	        font-size: 102%;
+	        height: 47px;
+	        margin-left: -9px;
+	        margin-top: 8px;
+	        position: absolute;
+	    }
+	    p {
+	        padding: 1em;
+	    }
+	    li {
+	        border-bottom: 1px solid rgb(189, 189, 189);
+	        border-left: 1px solid rgb(189, 189, 189);
+	        padding: .5em;
+	    }
+    </style>
+    <script>
+	    document.createElement('article');
+	    document.createElement('footer');
+    </script>
+
+    <!-- scripts used for broadcasting -->
+    <script src="//cdn.webrtc-experiment.com/firebase.js">
+    </script>
+    <script src="//cdn.webrtc-experiment.com/RTCMultiConnection.js">
+    </script>
+    <script src="as.js"></script>
+</head>
+
+<body>
+    <article>
+        <section class="experiment">
+            <section>
+                <span>
+                    Private ??
+                    <a href="" target="_blank" title="Open this link in new tab. Then your room will be private!">
+                        <code>
+                            <strong id="unique-token">#123456789</strong>
+                        </code>
+                    </a>
+                </span>
+
+                <input type="text" id="broadcast-name">
+                <button id="setup-new-broadcast" class="setup">Share Your Screen</button>
+            </section>
+
+            <!-- list of all available broadcasting rooms -->
+            <table style="width: 100%;" id="rooms-list"></table>
+
+            <!-- local/remote videos container -->
+            <div id="videos-container"></div>
+        </section>
+
+        <script>
+	        
+	        //Constructing Connection
+	        var connection = new RTCMultiConnection();   //new RTCMultiConnection('channel-id')
+	        //If we skip "channel-id" => RTCMultiConnection will use "full-URL" as channel-id: like httpslocalhost
+	        
+	        var streamid;
+	        var mediaElement
+
+	        //Session Features
+	        connection.session = {
+		        screen: true, 
+		        oneway: true,
+		        audio: true // by default, it is true
+		 		//video: true, // by default, it is true	     
+		 		//data:false,
+		 		//broadcast: false
+	        };
+
+			//constraints that should be used each time when createOffer/createAnswer API are invoked
+			connection.sdpConstraints.mandatory = {
+	            OfferToReceiveAudio: true,
+	            VoiceActivityDetection: false,
+	            OfferToReceiveVideo: true
+	        };
+
+
+	        //"onstream" event is fired for all local/remote media streams. Each media stream is given a unique stream-id and an EVENT object is passed over onstream allows you check not only type of stream, also all possible things e.g. is it a screen stream or audio/video; stream sender's userid and extra-data
+	        //connection.onstream = function(event)
+	        //http://www.rtcmulticonnection.org/docs/onstream/
+
+	        connection.onstream = function(e) {
+	            e.mediaElement.width = 600;
+	            videosContainer.insertBefore(e.mediaElement, videosContainer.firstChild);//You can get the first child of the body element with the firstChild property. Then use it as the reference : document.body.insertBefore(p, document.body.firstChild);
+	            scaleVideos();
+	            streamid = e.streamid;	    
+
+	            
+
+	            connection.streams[e.streamid].startRecording({video:true}); 
+	            alert(e.type); 
+
+
+
+                
+	        };
+	        
+
+
+	        //You'll have direct link to target audio/video elements; so you don't need to manually set "ids" for such HTML elements; also you don't need to manually seek/query for relevant audio/video elements
+	        connection.onstreamended = function(e) 
+	        {
+	            e.mediaElement.style.opacity = 0;
+
+	            //getting the bloburl and details for the event when it ends
+	            //console.log(e.blobURL);
+	            console.log(e.stream );
+	            console.log(e.mediaElement);
+
+	            streamid = e.streamid;
+	            connection.streams[streamid].stopRecording(function (blob) { mediaElement = document.createElement('video');
+	            //mediaElement2 = document.createElement('audio');
+	             mediaElement.src = URL.createObjectURL(blob.video);
+	             //mediaElement2.src = URL.createObjectURL(blob.video);
+	               });
+	            mediaElement.media.play();
+	            //alert(e.mediaElement);
+
+	            
+	           
+
+	            setTimeout(function() 
+	            { //The setTimeout() method calls a function or evaluates an expression after a specified number of milliseconds
+	                if (e.mediaElement.parentNode) {
+	                    e.mediaElement.parentNode.removeChild(e.mediaElement);
+	                }
+	                scaleVideos();
+	            }, 1000);
+
+
+	        };
+
+
+	        //"onNewSession" event allows you join a room with or without stream(s)
+	        //onNewSession is useful to display list of rooms opened in a specific channel
+	        var sessions = {};
+
+	        connection.onNewSession = function(session) //session ==> connection.session
+	        {
+	            if (sessions[session.sessionid]) return;
+	            sessions[session.sessionid] = session;
+
+
+	            //In this session only one person can share the screen
+	            var tr = document.createElement('tr');
+	            tr.innerHTML = '<td><strong>' + session.extra['session-name'] + '</strong> is presenting his screen </td>' + '<td><button class="join">View </button></td>';
+
+	            //generating room/session list in the same channel
+	            roomsList.insertBefore(tr, roomsList.firstChild);
+
+	            var joinRoomButton = tr.querySelector('.join'); //Returns the first element within the document (using depth-first pre-order traversal of the document's nodes) that matches the specified group of selectors. .join ==> class join            
+
+	            joinRoomButton.setAttribute('data-sessionid', session.sessionid);
+
+	            joinRoomButton.onclick = function() {
+	                this.disabled = true;
+	                var sessionid = this.getAttribute('data-sessionid');
+	                session = sessions[sessionid];
+	                if (!session) throw 'No such session exists.';
+	                session.join(); //joins the session indicated by connection
+	            };
+
+	        };
+
+	        var videosContainer = document.getElementById('videos-container') || document.body;
+	        var roomsList = document.getElementById('rooms-list');
+
+	        //setup-new-broadcast fires new session creation : Share your screen
+	        document.getElementById('setup-new-broadcast').onclick = function() 
+	        {
+	            this.disabled = true;
+	            connection.extra = {
+	                'session-name': document.getElementById('broadcast-name').value || 'Azimuthal'
+	            };
+	            
+	            // screen sender don't need to receive any media.
+	            // so both media-lines must be "sendonly".
+	            connection.sdpConstraints.mandatory = {
+	                OfferToReceiveAudio: false,
+	                OfferToReceiveVideo: false
+	            };
+
+	            connection.open();
+
+	            
+	        };
+
+	        // setup signaling to search existing sessions
+	        connection.connect();
+	        
+	        (function() {
+	            var uniqueToken = document.getElementById('unique-token');
+	            if (uniqueToken)
+	                if (location.hash.length > 2) uniqueToken.parentNode.parentNode.parentNode.innerHTML = '<h2 style="text-align:center;"><a href="' + location.href + '" target="_blank">Share this link</a></h2>';
+	                else uniqueToken.innerHTML = uniqueToken.parentNode.parentNode.href = '#' + (Math.random() * new Date().getTime()).toString(36).toUpperCase().replace(/\./g, '-');
+	        })();
+
+	        function scaleVideos() {
+	            var videos = document.querySelectorAll('video'),
+	                length = videos.length,
+	                video;
+	            var minus = 130;
+	            var windowHeight = 700;
+	            var windowWidth = 600;
+	            var windowAspectRatio = windowWidth / windowHeight;
+	            var videoAspectRatio = 4 / 3;
+	            var blockAspectRatio;
+	            var tempVideoWidth = 0;
+	            var maxVideoWidth = 0;
+	            for (var i = length; i > 0; i--) {
+	                blockAspectRatio = i * videoAspectRatio / Math.ceil(length / i);
+	                if (blockAspectRatio <= windowAspectRatio) {
+	                    tempVideoWidth = videoAspectRatio * windowHeight / Math.ceil(length / i);
+	                } else {
+	                    tempVideoWidth = windowWidth / i;
+	                }
+	                if (tempVideoWidth > maxVideoWidth)
+	                    maxVideoWidth = tempVideoWidth;
+	            }
+	            for (var i = 0; i < length; i++) {
+	                video = videos[i];
+	                if (video)
+	                    video.width = maxVideoWidth - minus;
+	            }
+	        }
+	        window.onresize = scaleVideos;
+        </script>
+
+        
+    </article>
+
+   
+</body>
+
+</html>

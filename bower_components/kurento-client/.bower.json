@@ -1,0 +1,14 @@
+{
+  "name": "kurento-client",
+  "homepage": "https://github.com/Kurento/kurento-client-bower",
+  "version": "5.1.0",
+  "_release": "5.1.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "5.1.0",
+    "commit": "ed259039ed855112686a94846f4a737a066d5ad0"
+  },
+  "_source": "git://github.com/Kurento/kurento-client-bower.git",
+  "_target": "5.1.0",
+  "_originalSource": "kurento-client"
+}
