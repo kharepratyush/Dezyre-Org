@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="keywords" content="JavaScript, WebRTC" />
+<meta name="description" content="WebRTC codelab" />
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1">
+
+<title>Video Loopback</title>
+
+<style>
+
+video {
+  width: 100% ;  
+  height: 100%;  
+}
+</style>
+
+<script src='js/lib/adapter.js'></script>  <!--//cross-browser implementation-->
+
+</head>
+
+<body>
+
+<video autoplay></video>
+
+<script>
+
+var constraints = {video: true,audio:true};
+
+function successCallback(stream) {
+  window.stream = stream;
+  var video = document.querySelector("video");
+  video.src = window.URL.createObjectURL(stream);
+  //video.play();
+}
+
+function errorCallback(error){
+  console.log("getUserMedia error: ", error);
+}
+
+getUserMedia(constraints, successCallback, errorCallback);
+</script>
+
+</body>
+
+</html>
