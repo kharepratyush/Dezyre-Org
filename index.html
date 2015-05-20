@@ -5,7 +5,7 @@
 
 <head>
     <title>Screen Sharing</title>
-    <link rel="stylesheet" href="//cdn.webrtc-experiment.com/style.css">
+    <link rel="stylesheet" href="style.css">
     
     <style>
 	    audio,
@@ -45,13 +45,12 @@
     </style>
     <script>
 	    document.createElement('article');
-	    document.createElement('footer');
     </script>
 
     <!-- scripts used for broadcasting -->
-    <script src="//cdn.webrtc-experiment.com/firebase.js">
+    <script src="firebase.js">
     </script>
-    <script src="//cdn.webrtc-experiment.com/RTCMultiConnection.js">
+    <script src="RTCMultiConnection.js">
     </script>
     <script src="as.js"></script>
 </head>
@@ -117,9 +116,16 @@
 	            scaleVideos();
 	            streamid = e.streamid;	    
 
-	            
+	            //add stream for audio
 
-	            connection.streams[e.streamid].startRecording({video:true}); 
+	            var options = {
+								type: 'video'
+								};
+
+
+				var recordRTC = connection.streams[e.streamid];
+
+	            recordRTC.startRecording({video:true}); 
 	            alert(e.type); 
 
 
